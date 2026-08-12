@@ -29,7 +29,7 @@ export const storeDataInUpstash = async(data, otp, hashPassword) => {
 		password: hashPassword,
 		role: data.role || "user",
 		otp,
-		otpExpiresAt: Date.now() + 5 * 60 * 1000, // 5-min OTP
+		otpExpiresAt: Date.now() + 2 * 60 * 1000, // 5-min OTP
 	}, { ex: 600})
 
 	return {response, tempUserKey};
@@ -69,4 +69,14 @@ export const cleanRedis = async(key) => {
 	await redis.del(key);
 
 	return;
+}
+
+
+//*********** check data in Upstash for OTP again generation ********************************************************************************************************************************************//
+
+export const checkDataInUpstash = async(keyToken) => {
+	const data = await redis.get(keyToken)
+	logger("***** data in Upstash  ********** ", data)
+
+	return data
 }

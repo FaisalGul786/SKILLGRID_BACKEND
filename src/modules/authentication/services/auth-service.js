@@ -1,7 +1,7 @@
 import {AppError} from "../../../shared/errors/app-error.js"
 
 
-import {emailCheckRepository, storeDataInUpstash, getDataFromUpstash, storeRegisteredUser, cleanRedis } from "../repositories/auth-repository.js"
+import {emailCheckRepository, storeDataInUpstash, getDataFromUpstash, storeRegisteredUser, cleanRedis, checkDataInUpstash } from "../repositories/auth-repository.js"
 
 import bcrypt from "bcryptjs"
 
@@ -15,7 +15,7 @@ export const registerService = async(registerationData) => {
 	
 	const isEmailExist = await emailCheckRepository(registerationData.email)
 
-	if(!isEmailExist.length === 0) throw new AppError("Email already exist!!", 409)
+	if(isEmailExist.length > 0) throw new AppError("Email already exist!!", 409)
 
 		const hashPassword = await bcrypt.hash(registerationData.password, 10)
 
@@ -62,7 +62,10 @@ export const verifyOTPService = async(otp, registerKey) => {
 	// ✅ check OTP time
 	if (Date.now() > data.otpExpiresAt) {
 
-    throw new Error("OTP has expired. Click resend to get a new code.", 400, "OTP_EXPIRED")
+		logger(`date.now ************${Date.now()}`, data.otpExpiresAt)
+		logger(`Date.now() > data.otpExpiresAt ******* `, Date.now() > data.otpExpiresAt)
+
+    throw new AppError("OTP has expired. Click resend to get a new code.", 400, "OTP_EXPIRED")
   }
 
 	// ✅ validate OTP
@@ -82,6 +85,34 @@ export const verifyOTPService = async(otp, registerKey) => {
 	await cleanRedis(registerKey)
 
 	// ✅ account register email 
+
+	return;
+}
+
+
+//************** generate OTP Service ***********//
+
+export const generateOTPService = async(token) => {
+
+	const isPresent = await checkDataInUpstash(token)
+
+	if(isPresent === null) {
+		throw new AppError("Session expired due to inactivity. Please sign up again.", 400, "REGISTRATION_EXPIRED")
+	}
+
+	// ✅ send otp to email
+	try {
+		await sendTestOtp(isPresent.email, otp)
+
+	}
+	catch(error) {
+		logger("OTP sending issue **** ", error)
+
+		throw new AppError(
+			"Unable to send OTP",
+			500
+			);
+	}
 
 	return;
 }

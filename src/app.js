@@ -19,6 +19,9 @@ app.use("/api/auth", authRoutes);
 // verify otp for registeration
 app.use("/api/auth/verify", authRoutes);
 
+// OTP resend
+app.use("/api/auth/resend", authRoutes);
+
 /************* Global Error Handler Middleware **********/
 
 app.use(errorHandler);

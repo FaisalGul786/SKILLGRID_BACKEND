@@ -1,5 +1,5 @@
 
-import {registerService, verifyOTPService} from "../services/auth-service.js";
+import {registerService, verifyOTPService, generateOTPService} from "../services/auth-service.js";
 
 import {logger} from "../../../shared/utils/logger.js"
 
@@ -29,4 +29,19 @@ export const verifyOTP = async(req,res) => {
 	 	success: true,
 	 	message: "Account verified 🥳"
 	 })
+}
+
+//********** generate OTP ************//
+
+export const generateOTP = async(req,res) => {
+	const {registerKey} = req.body
+
+	logger("key ****** "  , registerKey)
+
+	await generateOTPService(registerKey)
+
+	return res.status(200).json({
+		success:  true,
+		message: "OTP resend !"
+	})
 }
