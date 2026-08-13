@@ -22,6 +22,9 @@ app.use("/api/auth/verify", authRoutes);
 // OTP resend
 app.use("/api/auth/resend", authRoutes);
 
+//  Login
+app.use("/api/auth", authRoutes)
+
 /************* Global Error Handler Middleware **********/
 
 app.use(errorHandler);

@@ -1,14 +1,18 @@
 import {Router} from "express";
 
-import {registerController, verifyOTP, generateOTP } from "../controllers/auth-controller.js"
+
+import * as authController from "../controllers/auth-controller.js"
+
 
 const router = Router()
 
-router.post("/register", registerController)
+router.post("/register",authController.registerController)
 
-router.post("/otp", verifyOTP)
+router.post("/otp", authController.verifyOTP)
 
-router.get("/otp", generateOTP)
+router.get("/otp", authController.generateOTP)
+
+router.post("/login", authController.login)
 
 
 export default router;

@@ -1,19 +1,28 @@
 import {AppError} from "../../../shared/errors/app-error.js"
 
 
-import {emailCheckRepository, storeDataInUpstash, getDataFromUpstash, storeRegisteredUser, cleanRedis, checkDataInUpstash } from "../repositories/auth-repository.js"
+import * as authRepository from "../repositories/auth-repository.js"
+
 
 import bcrypt from "bcryptjs"
 
-import {otp} from "../../../shared/utils/create-otp.js"
+import {generateVerificationOTP} from "../../../shared/utils/create-otp.js"
 
 import  {sendTestOtp} from "../../../external_services/email_service/send-email.js"
 
 import {logger} from "../../../shared/utils/logger.js"
 
+import jwt from "jsonwebtoken"
+
+import envConfig from "../../../shared/config_env/env-variables-config.js"
+
+/*
+* User Register
+*/
+
 export const registerService = async(registerationData) => {
 	
-	const isEmailExist = await emailCheckRepository(registerationData.email)
+	const isEmailExist = await authRepository.emailCheckRepository(registerationData.email)
 
 	if(isEmailExist.length > 0) throw new AppError("Email already exist!!", 409)
 
@@ -22,9 +31,11 @@ export const registerService = async(registerationData) => {
 	logger("*** password hash *** ", hashPassword)
 
 	
+	const otp = generateVerificationOTP()
+	logger("generated ***** OTP ********* ", otp)
 
 	// ✅ Set data in upstash
-	const {response, tempUserKey} = await storeDataInUpstash(registerationData, otp, hashPassword)
+	const {response, tempUserKey} = await authRepository.storeDataInUpstash(registerationData, otp, hashPassword)
 	if(!response) {
 		throw new AppError("data not store in upsatah database")
 	}
@@ -35,7 +46,7 @@ export const registerService = async(registerationData) => {
 
 	}
 	catch(error) {
-		logger("OTP sending issue **** ", error)
+		logger("OTP sending issue **** ", error.message)
 
 		throw new AppError(
 			"Unable to send OTP",
@@ -52,7 +63,7 @@ export const registerService = async(registerationData) => {
 export const verifyOTPService = async(otp, registerKey) => {
 
 	// ✅ get data
-	const data = await getDataFromUpstash(registerKey)
+	const data = await authRepository.getDataFromUpstash(registerKey)
 
 	if(!data) {
 		throw new AppError("Session expired due to inactivity. Please sign up again.", 400, "REGISTRATION_EXPIRED")
@@ -78,11 +89,11 @@ export const verifyOTPService = async(otp, registerKey) => {
 
 	// ✅ remove data from redis / store in database
 
-	await storeRegisteredUser(data);
+	await authRepository.storeRegisteredUser(data);
 
 	// ✅ Clean up Redis
 
-	await cleanRedis(registerKey)
+	await authRepository.cleanRedis(registerKey)
 
 	// ✅ account register email 
 
@@ -94,13 +105,25 @@ export const verifyOTPService = async(otp, registerKey) => {
 
 export const generateOTPService = async(token) => {
 
-	const isPresent = await checkDataInUpstash(token)
+	const isPresent = await authRepository.checkDataInUpstash(token)
 
 	if(isPresent === null) {
 		throw new AppError("Session expired due to inactivity. Please sign up again.", 400, "REGISTRATION_EXPIRED")
 	}
 
 	// ✅ send otp to email
+	const otp = generateVerificationOTP()
+
+	logger("new OTP *********", otp)
+
+	// ✅ update otp in Upstash
+	logger("fetch data  upsatah ***** ", isPresent);
+	logger("\n", null)
+	isPresent.otp = otp;
+	isPresent.otpExpiresAt = Date.now() + 2 * 60 * 1000 // 5 minutes
+	logger("after update ****** ", isPresent)
+	await authRepository.updateOTPInUpstash(isPresent, token)
+
 	try {
 		await sendTestOtp(isPresent.email, otp)
 
@@ -115,4 +138,39 @@ export const generateOTPService = async(token) => {
 	}
 
 	return;
+}
+
+
+/*
+* LOGIN SERVICE
+*/
+
+export const loginService = async(email, password) => {
+
+	// ✅ check User exist in database , is_verified
+
+	const user = await authRepository.findUser(email)
+
+	logger("******** User in database ", user);
+
+	if(user < 1) throw new AppError("User not Exist 🙅🏻‍♂️", 404)
+
+	// ✅ validate password
+
+	const isPsswordMatched = await bcrypt.compare(password, user[0]?.password)
+	logger("***** password bcrypt ********* ", isPsswordMatched)
+
+	if(!isPsswordMatched) throw new AppError("Email or Password are no correct 🚫", 401)
+
+
+	//✅ sign jwt token
+	const signToken = await jwt.sign(
+	{
+		userId: user.id,
+		userName: user.userName
+	},
+	envConfig.SECRET_KEY,
+	{expiresIn: "20m"})
+
+	return signToken;
 }
