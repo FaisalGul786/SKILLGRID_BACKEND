@@ -39,3 +39,7 @@ drizzle
 
 # test database connection
 test-db.js
+
+# scripts
+
+scripts

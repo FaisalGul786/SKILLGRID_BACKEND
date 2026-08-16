@@ -10,6 +10,8 @@ import {redis} from "../../../shared/redis_database/upstash-client.js"
 
 import crypto  from "crypto"
 
+import {roles} from "../../../shared/access_control/schema/roles-schema.js"
+
 export const emailCheckRepository = async(email) => {
     const isEmailExistDb = await db.select().from(users).where(eq(users.email, email))
     logger("****** check email **** ", isEmailExistDb)
@@ -18,7 +20,7 @@ export const emailCheckRepository = async(email) => {
 }
 
 /* *********** Upstash data save ******** */
-export const storeDataInUpstash = async(data, otp, hashPassword) => {
+export const storeDataInUpstash = async(data, otp, hashPassword, defaultId) => {
     const tempUserKey = `user_key: ${crypto.randomUUID()}`
     logger("*** temp-key before storing *** ", tempUserKey)
 
@@ -27,9 +29,9 @@ export const storeDataInUpstash = async(data, otp, hashPassword) => {
         userName: data.userName,
         email: data.email,
         password: hashPassword,
-        role: data.role || "user",
+        roleId: defaultId,
         otp,
-        otpExpiresAt: Date.now() + 2 * 60 * 1000, // 5-min OTP
+        otpExpiresAt: Date.now() + 5 * 60 * 1000, // 5-min OTP
     }, { ex: 600})
 
     return {response, tempUserKey};
@@ -51,12 +53,14 @@ export const getDataFromUpstash = async(key) => {
 
 export const storeRegisteredUser = async(data) => {
 
+    logger("****** defaultId before saving to users table ***** ", data.roleId)
+
     await db.insert(users).values({
 
         userName: data.userName,
         email: data.email,
         password: data.password,
-        role: data.role || "user",
+        roleId: data.roleId,
         isVerified: true
     })
 
@@ -95,6 +99,20 @@ export const updateOTPInUpstash = async(newDataWithNewOTP, upstashKey) => {
 
 
 /*
+* get student default Id
+*/
+export const getDefaultId = async() => {
+    const [role] = await db.select().from(roles).where(eq(
+        roles.roleName, "student"
+    )).limit(1);
+
+    return role.id
+}
+
+
+
+
+/*
 * Login Querries
 */
 
@@ -109,4 +127,42 @@ export const findUser = async(email) => {
     return isUserExist;
 
 
+}
+
+
+/*
+* store data in Upstash for forgot password
+*/
+
+export const storeUpstash = async(otp, email) => {
+
+    const tempKey = `forgot_password_key: ${crypto.randomUUID()}`
+    logger("*** temp-key before storing *** ", tempKey)
+
+    const response = await redis.set(tempKey, {
+
+        email,
+        otp,
+        otpExpiresAt: Date.now() + 5 * 60 * 1000, // 5-min OTP
+        verified: false,
+    }, { ex: 600})
+
+    return tempKey;
+}
+
+
+/*
+* set new password
+*/
+
+export const setNewPassword = async(email, newPassword) => {
+   const updated = await db.update(users).set({
+    password: newPassword
+}).where(eq(users.email, email))
+   .returning();
+
+   logger("******* updated ", updated)
+
+
+   return;
 }

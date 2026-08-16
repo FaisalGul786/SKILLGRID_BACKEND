@@ -21,7 +21,8 @@ import envConfig from "../../../shared/config_env/env-variables-config.js"
 */
 
 export const registerService = async(registerationData) => {
-	
+	// ✅ check email exist in database
+
 	const isEmailExist = await authRepository.emailCheckRepository(registerationData.email)
 
 	if(isEmailExist.length > 0) throw new AppError("Email already exist!!", 409)
@@ -34,8 +35,12 @@ export const registerService = async(registerationData) => {
 	const otp = generateVerificationOTP()
 	logger("generated ***** OTP ********* ", otp)
 
+	// ✅ get default roleId of student
+	const defaultId = await authRepository.getDefaultId()
+	logger("***** student Id ********** ", defaultId)
+
 	// ✅ Set data in upstash
-	const {response, tempUserKey} = await authRepository.storeDataInUpstash(registerationData, otp, hashPassword)
+	const {response, tempUserKey} = await authRepository.storeDataInUpstash(registerationData, otp, hashPassword, defaultId)
 	if(!response) {
 		throw new AppError("data not store in upsatah database")
 	}
@@ -120,7 +125,7 @@ export const generateOTPService = async(token) => {
 	logger("fetch data  upsatah ***** ", isPresent);
 	logger("\n", null)
 	isPresent.otp = otp;
-	isPresent.otpExpiresAt = Date.now() + 2 * 60 * 1000 // 5 minutes
+	isPresent.otpExpiresAt = Date.now() + 5 * 60 * 1000 // 5 minutes
 	logger("after update ****** ", isPresent)
 	await authRepository.updateOTPInUpstash(isPresent, token)
 
@@ -173,4 +178,117 @@ export const loginService = async(email, password) => {
 	{expiresIn: "20m"})
 
 	return signToken;
+}
+
+/*
+* Forgot Password service
+*/
+
+export const generateForgotPasswordOTP = async(email) => {
+
+	// ✅ check email exist before generating OTP for forgot password
+
+	const isUserExist = await authRepository.findUser(email)
+
+	logger("******** User in database ", isUserExist);
+
+	if(isUserExist < 1) throw new AppError("If an account associated with that email exists, we have sent a verification code to your inbox.", 200);
+
+
+	// ✅ store email, OTP , varified === false in Upstash 
+
+	const otp = generateVerificationOTP()
+	logger("generated otp ********* ", otp)
+
+	// ✅ store in redis
+	const key = await authRepository.storeUpstash(otp, email)
+
+	logger("**** key", key)
+
+	// ✅ email OTP
+
+
+	try {
+		await sendTestOtp(email, otp)
+
+	}
+	catch(error) {
+		logger("OTP sending issue **** ", error)
+
+		throw new AppError(
+			"Unable to send OTP",
+			500
+			);
+	}
+
+	return key;
+
+}
+
+
+/*
+* validate forgot password
+*/
+export const validateForgotPasswordOTPService = async(otp, key) => {
+	
+	// ✅ fetch data from redis
+	const data = await authRepository.getDataFromUpstash(key)
+
+	if(!data) {
+		throw new AppError("Session expired due to inactivity. Please sign up again.", 400, "REGISTRATION_EXPIRED")
+	}
+
+	// ✅ compare OTP time
+
+	if (Date.now() > data.otpExpiresAt) {
+
+		logger(`date.now ************${Date.now()}`, data.otpExpiresAt)
+		logger(`Date.now() > data.otpExpiresAt ******* `, Date.now() > data.otpExpiresAt)
+
+    throw new AppError("OTP has expired.", 400, "OTP_EXPIRED")
+  }
+
+	// ✅ validate OTP
+
+	if (data.otp !== otp) {
+		
+
+		throw new AppError("Invalid OTP code.", 400)
+	}
+
+	// ✅ update stash varified => true
+
+	data.verified = true;
+
+	await authRepository.updateOTPInUpstash(data, key)
+
+	return;
+
+
+}
+
+
+/*
+* update password
+*/
+
+
+export const updatePasswordService = async(newPassword, key) => {
+
+	// ✅ get data
+	const data = await authRepository.getDataFromUpstash(key);
+	logger("**** upstash data ", data)
+
+	if(data.verified !== true) throw new AppError("Invalid or expired reset session. Please request a new OTP.", 400)
+
+	// ✅ set new password
+
+	const hashPassword = await bcrypt.hash(newPassword, 10)
+
+	await authRepository.setNewPassword(data.email, hashPassword)
+
+	// ✅  clean redis
+	await authRepository.cleanRedis(key)
+
+	return;
 }

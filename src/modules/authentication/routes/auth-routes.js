@@ -14,5 +14,11 @@ router.get("/otp", authController.generateOTP)
 
 router.post("/login", authController.login)
 
+router.post("/forgot-password", authController.forgotPassword)
+
+router.post("/verify/forgot-password", authController.validateForgotPasswordOTP)
+
+router.patch("/update-password", authController.updatePassword)
+
 
 export default router;

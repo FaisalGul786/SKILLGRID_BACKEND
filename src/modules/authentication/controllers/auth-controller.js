@@ -76,3 +76,63 @@ export const login = async(req,res) => {
 	})
 
 }
+
+
+/*
+* Forgot Password
+*/
+
+export const forgotPassword = async(req,res) => {
+	const {email} = req.body
+
+	const key = await authService.generateForgotPasswordOTP(email)
+	logger(`key **********`,key)
+
+	res.cookie("forgot_key", key, {
+		httpOnly: true,
+		secure: envConfig.NODE_ENV === "production",
+		sameSite: envConfig.NODE_ENV === "production" ? "strict" : "lax",
+		maxAge: 10 * 60 * 1000,
+		path: "/api/auth",
+	})
+
+	return res.status(200).json({
+		success: true,
+		message: "If an account associated with that email exists, we have sent a verification code to your inbox.",
+		// remove key latter when frontend is ready
+		forgotPasswordKey: key
+	})
+}
+
+
+/*
+* validate Forgot Password OTP
+*/
+export const validateForgotPasswordOTP = async(req,res) => {
+	const { otp, forgotPasswordKey } = req.body
+
+	logger(`**************\n \n ${otp}`, forgotPasswordKey)
+
+	await authService.validateForgotPasswordOTPService(otp, forgotPasswordKey)
+
+	return res.status(200).json({
+		success: true,
+		message: "OTP Verified !",
+		forgotPasswordKey
+	})
+}
+
+
+/*
+* update password
+*/
+export const updatePassword = async(req,res) => {
+	const { newPassword, forgotPasswordKey } = req.body
+
+	await authService.updatePasswordService(newPassword, forgotPasswordKey)
+
+	return res.status(200).json({
+		success: true,
+		message: "password set successfully 🎊"
+	})
+}
