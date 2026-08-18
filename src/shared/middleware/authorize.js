@@ -6,18 +6,24 @@
 import {AppError} from "../errors/app-error.js";
 
 
-import {permissions} from "../shared/access_control/schema/permissions-schema.js"
+import {permissions} from "../access_control/schema/permissions-schema.js"
 
-import {rolePermissions} from "../shared/access_control/schema/role-permissions-schema.js"
+import {rolePermissions} from "../access_control/schema/role-permissions-schema.js"
 
 import {users} from "../../modules/authentication/schema/authentication-schema.js"
 
-import {db} from "../database/config/db-connetion.js"
+import {logger} from "../utils/logger.js"
+
+import {db} from "../database/config/db-connection.js"
 
 import {eq,and} from "drizzle-orm"
 
-const authorize = async(requiredPermission) => {
+const authorize =  (requiredPermission) => {
 	return async(req,res,next) => {
+
+		logger("***** permission to check ", requiredPermission)
+
+		logger(" user id ********* ", req.user?.userId)
 
 		const id = req.user?.userId;
 
@@ -38,7 +44,7 @@ const authorize = async(requiredPermission) => {
 			.innerJoin(users, eq(rolePermissions.roleId, users.roleId))
 			.where(
 				and(
-					eq(users.id, userId),
+					eq(users.id, id),
 					eq(permissions.actionPermission, requiredPermission)
 					)
 				)
@@ -49,11 +55,13 @@ const authorize = async(requiredPermission) => {
 		}
 
 		logger(`** permissions assigned  to certain role with userId ${req.user?.userId}`, foundPermission)
+		if (foundPermission.length === 0) {
+			throw new AppError("Forbidden: Insufficient permissions 🚫", 403);
+		}
+
+		next()
 	}
 
-	if (foundPermission.length === 0) {
-		throw new AppError("Forbidden: Insufficient permissions 🚫", 403);
-	}
-
-	next()
 }
+
+export default authorize

@@ -11,6 +11,10 @@ const authenticate = async(req,res,next) => {
 	// const token = req.headers.authorization.split(" ")[1]; // For Postman
 	const accessToken = req.cookies.access_token; // automatic attach
 
+	logger("JWT token ****** ",  accessToken)
+
+	logger("****** Secret key ******** ", envConfig.SECRET_KEY)
+
 	if(!accessToken) throw new AppError("Access denied 🚫, Try to login first", 401);
 
 	try{

@@ -81,8 +81,8 @@ export const verifyOTPService = async(otp, registerKey) => {
 		logger(`date.now ************${Date.now()}`, data.otpExpiresAt)
 		logger(`Date.now() > data.otpExpiresAt ******* `, Date.now() > data.otpExpiresAt)
 
-    throw new AppError("OTP has expired. Click resend to get a new code.", 400, "OTP_EXPIRED")
-  }
+		throw new AppError("OTP has expired. Click resend to get a new code.", 400, "OTP_EXPIRED")
+	}
 
 	// ✅ validate OTP
 
@@ -162,20 +162,20 @@ export const loginService = async(email, password) => {
 
 	// ✅ validate password
 
-	const isPsswordMatched = await bcrypt.compare(password, user[0]?.password)
+		const isPsswordMatched = await bcrypt.compare(password, user[0]?.password)
 	logger("***** password bcrypt ********* ", isPsswordMatched)
 
 	if(!isPsswordMatched) throw new AppError("Email or Password are no correct 🚫", 401)
 
 
 	//✅ sign jwt token
-	const signToken = await jwt.sign(
-	{
-		userId: user.id,
-		userName: user.userName
-	},
-	envConfig.SECRET_KEY,
-	{expiresIn: "20m"})
+		const signToken = await jwt.sign(
+		{
+			userId: user[0]?.id,
+			userName: user[0]?.userName
+		},
+		envConfig.SECRET_KEY,
+		{expiresIn: "20m"})
 
 	return signToken;
 }
@@ -245,8 +245,8 @@ export const validateForgotPasswordOTPService = async(otp, key) => {
 		logger(`date.now ************${Date.now()}`, data.otpExpiresAt)
 		logger(`Date.now() > data.otpExpiresAt ******* `, Date.now() > data.otpExpiresAt)
 
-    throw new AppError("OTP has expired.", 400, "OTP_EXPIRED")
-  }
+		throw new AppError("OTP has expired.", 400, "OTP_EXPIRED")
+	}
 
 	// ✅ validate OTP
 
@@ -283,7 +283,7 @@ export const updatePasswordService = async(newPassword, key) => {
 
 	// ✅ set new password
 
-	const hashPassword = await bcrypt.hash(newPassword, 10)
+		const hashPassword = await bcrypt.hash(newPassword, 10)
 
 	await authRepository.setNewPassword(data.email, hashPassword)
 
