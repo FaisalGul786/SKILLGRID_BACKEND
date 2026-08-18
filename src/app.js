@@ -7,6 +7,8 @@ import {errorHandler} from "./shared/middleware/global-error-handler.js";
 
 import authRoutes from "./modules/authentication/routes/auth-routes.js"
 
+import courseManagementRoutes from "./modules/course_management/routes/course-management-routes.js"
+
 const app = express();
 
 app.use(express.json());
@@ -37,6 +39,14 @@ app.use("/api/auth/otp", authRoutes)
 
 // update password 
 app.use("/api/auth", authRoutes)
+
+// COURSE-MANAGEMENT____________________________________________________________________________________________________________________________________________
+
+// Instructor gets signature to directly upload media
+app.use("/api/media/upload", courseManagementRoutes)
+
+// Instructor create course
+app.use("/api/course", courseManagementRoutes)
 
 /************* Global Error Handler Middleware **********/
 

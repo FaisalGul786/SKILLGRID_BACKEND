@@ -62,6 +62,10 @@ export const login = async(req,res) => {
 
 	const token = await authService.loginService(email, password)
 
+
+	logger("****** generated token ******** ", token)
+
+
 	res.cookie("access_token", token, {
 		httpOnly: true,
 		secure: envConfig.NODE_ENV === "production",
