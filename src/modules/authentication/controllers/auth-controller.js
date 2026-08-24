@@ -115,6 +115,8 @@ export const forgotPassword = async(req,res) => {
 export const validateForgotPasswordOTP = async(req,res) => {
 	const { otp, forgotPasswordKey } = req.body
 
+	logger(`\n\n\n ****** Is there attched key `, req.user);
+
 	logger(`**************\n \n ${otp}`, forgotPasswordKey)
 
 	await authService.validateForgotPasswordOTPService(otp, forgotPasswordKey)

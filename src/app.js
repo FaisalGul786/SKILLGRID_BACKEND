@@ -2,6 +2,7 @@ import express from "express";
 
 import cookieParser from "cookie-parser";
 
+import cors from "cors";
 
 import {errorHandler} from "./shared/middleware/global-error-handler.js";
 
@@ -9,7 +10,16 @@ import authRoutes from "./modules/authentication/routes/auth-routes.js"
 
 import courseManagementRoutes from "./modules/course_management/routes/course-management-routes.js"
 
+import lessonManagementRoutes from "./modules/lesson_management/routes/lesson-management-routes.js"
+import envConfig from "./shared/config_env/env-variables-config.js"
+
 const app = express();
+
+app.use(cors({
+	origin: `${envConfig.clientURL}` || "http://localhost:3000",
+	methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+	credentials: true
+}))
 
 app.use(express.json());
 
@@ -47,6 +57,15 @@ app.use("/api/media/upload", courseManagementRoutes)
 
 // Instructor create course
 app.use("/api/course", courseManagementRoutes)
+
+// Instructor adds lessons to created course before publishing course
+app.use("/api/courses", lessonManagementRoutes)
+
+// Instructor gets signature to upload video / pdf directly
+app.use("/api/lessons/media", lessonManagementRoutes) 
+
+// save data to lesson
+app.use("/api/lessons", lessonManagementRoutes)
 
 /************* Global Error Handler Middleware **********/
 
