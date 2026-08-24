@@ -15,8 +15,10 @@ import envConfig from "./shared/config_env/env-variables-config.js"
 
 const app = express();
 
+const reqOrigin = envConfig.NODE_ENV === 'development' ? "http://localhost:3000" : envConfig.clientURL
+
 app.use(cors({
-	origin: envConfig.clientURL || "http://localhost:3000",
+	origin: reqOrigin,
 	methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
 	credentials: true
 }))
