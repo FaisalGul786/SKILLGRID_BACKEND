@@ -14,6 +14,7 @@ import lessonManagementRoutes from "./modules/lesson_management/routes/lesson-ma
 import envConfig from "./shared/config_env/env-variables-config.js"
 
 const app = express();
+app.set("trust proxy", 1);
 
 const reqOrigin = envConfig.NODE_ENV === 'development' ? "http://localhost:3000" : envConfig.clientURL
 
