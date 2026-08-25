@@ -3,6 +3,7 @@ import { users } from '../../authentication/schema/authentication-schema.js';
 
 export const difficultyEnum = pgEnum('difficulty', ['beginner', 'intermediate', 'advanced']);
 export const courseStatusEnum = pgEnum('course_status', ['draft', 'published', 'archived']);
+export const courseTypeEnum = pgEnum('course_type', ['free', 'paid']);
 
 export const courses = pgTable('courses', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -10,6 +11,7 @@ export const courses = pgTable('courses', {
   description: text('description'),
   thumbnail: varchar('thumbnail', { length: 512 }),
   price: decimal('price', { precision: 10, scale: 2 }).notNull().default('0.00'),
+  courseType: courseTypeEnum('course_type').notNull().default('free'),
   difficulty: difficultyEnum('difficulty').default('beginner'),
   category: varchar('category', { length: 100 }),
   instructorId: uuid('instructor_id')
