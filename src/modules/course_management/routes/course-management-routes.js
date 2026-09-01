@@ -13,4 +13,8 @@ router.get("/signature", authenticate, authorize("media:upload"), courseManageme
 
 router.post("/create", authenticate, authorize("course:create"), courseManagementController.createCourse)
 
+router.get("/list",authenticate, courseManagementController.fetchCourses)
+
+router.get("/:courseId/lessons", authenticate, courseManagementController.fetchCourseLessons)
+
 export default router;

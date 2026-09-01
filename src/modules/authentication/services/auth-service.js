@@ -167,12 +167,24 @@ export const loginService = async(email, password) => {
 
 	if(!isPsswordMatched) throw new AppError("Email or Password are no correct 🚫", 401)
 
+	// ✅ harcoded role passing as roleId is number need extra api call so pass it as hardcoded only 3 roles => student (1) - Instructor (2) - admin (3)
+
+	let roleName = ''
+	
+	if(user[0].roleId === 2) roleName = 'instructor'
+		else if(user[0].roleId === 3) roleName = 'admin'
+			else roleName = 'student'
+
+	logger(`\n\n\n\n roleName will be set in payload `, roleName)
+
 
 	//✅ sign jwt token
 		const signToken = await jwt.sign(
 		{
 			userId: user[0]?.id,
-			userName: user[0]?.userName
+			userName: user[0]?.userName,
+			email: user[0]?.email,
+			roleName
 		},
 		envConfig.SECRET_KEY,
 		{expiresIn: "20m"})
