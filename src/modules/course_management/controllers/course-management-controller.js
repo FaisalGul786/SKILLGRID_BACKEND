@@ -52,3 +52,46 @@ export const createCourse  = async(req,res) => {
 		}
 	})
 }
+
+
+/*
+* get courses
+*/
+
+export const fetchCourses = async(req,res) => {
+	const page = parseInt(req.query.page) || 1;
+	const limit = parseInt(req.query.limit) || 4;
+
+	const { totalCoursesCount, coursesData, totalPages, currentPage} = await courseManagementService.fetchCoursesService(page, limit)
+
+	logger(`\n\n\n totalCoursesCount, coursessData, totalPages, currentPage`, {
+		totalCoursesCount, coursesData, totalPages, currentPage
+	})
+
+	return res.status(200).json({
+		success: true,
+		message: "All courses ...",
+		courseDetails: {
+			totalCoursesCount, coursesData, totalPages, currentPage
+		}
+	})
+}
+
+
+/*
+* get lessons for course
+*/
+
+export const  fetchCourseLessons = async(req,res) => {
+	const courseId = req.params.courseId
+
+	const userId = req.user.userId
+
+	const lessons = await courseManagementService.fetchCourseLessonsService(courseId, userId)
+
+	return res.status(200).json({
+		success: true,
+		message: "Lessons data ...",
+		lessons
+	})
+}

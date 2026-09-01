@@ -2,6 +2,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import envConfig from "../../../shared/config_env/env-variables-config.js"
 import {logger} from "../../../shared/utils/logger.js"
+import {courses} from "../schema/course-management-schema.js"
 
 import {AppError } from "../../../shared/errors/app-error.js"
 
@@ -53,4 +54,48 @@ export const createCourseService = async(course, instructorId) => {
 	const courseData = await courseManagementRepository.createCourse(course, instructorId)
 
 	return courseData
+}
+
+
+/*
+* Fetch courses
+*/
+
+export const fetchCoursesService = async(page,limit) => {
+
+	const skip = (page - 1) * limit
+
+	logger("\n\n\n ******* skip", skip)
+
+	const courseCount = await courseManagementRepository.coursesCount()
+
+	logger(`\n\n\n ***** courses count `, courseCount)
+
+	// Fetch only the sliced 4 courses
+    const coursesData = await courseManagementRepository.fetchCoursesData(skip,limit)
+
+    logger(`\n\n **** courses`, coursesData)
+
+    const totalPages = Math.ceil(courseCount / limit)
+
+    logger(`\n\n ****** total pages `, totalPages)
+
+    return {
+    	totalCoursesCount: courseCount,
+    	coursesData,
+    	totalPages,
+    	currentPage: page
+    }
+}
+
+
+/*
+* fetch lessons any course
+*/
+
+export const fetchCourseLessonsService = async(courseId, userId) => {
+
+	const lessons = await courseManagementRepository.fetchCourseLessons(courseId,userId)
+
+	return lessons
 }

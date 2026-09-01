@@ -11,6 +11,7 @@ import authRoutes from "./modules/authentication/routes/auth-routes.js"
 import courseManagementRoutes from "./modules/course_management/routes/course-management-routes.js"
 
 import lessonManagementRoutes from "./modules/lesson_management/routes/lesson-management-routes.js"
+
 import envConfig from "./shared/config_env/env-variables-config.js"
 
 const app = express();
@@ -61,7 +62,13 @@ app.use("/api/media/upload", courseManagementRoutes)
 // Instructor create course
 app.use("/api/course", courseManagementRoutes)
 
-// Instructor adds lessons to created course before publishing course
+// get all courses cataloge
+app.use("/api/courses", courseManagementRoutes)
+
+// fetch course lessons
+app.use("/api/courses", courseManagementRoutes)
+
+// Instructor adds lessons to created course before publishing course like title/notes
 app.use("/api/courses", lessonManagementRoutes)
 
 // Instructor gets signature to upload video / pdf directly
@@ -69,6 +76,7 @@ app.use("/api/lessons/media", lessonManagementRoutes)
 
 // save data to lesson
 app.use("/api/lessons", lessonManagementRoutes)
+
 
 /************* Global Error Handler Middleware **********/
 
