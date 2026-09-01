@@ -12,6 +12,8 @@ import courseManagementRoutes from "./modules/course_management/routes/course-ma
 
 import lessonManagementRoutes from "./modules/lesson_management/routes/lesson-management-routes.js"
 
+import enrollmentRoutes from "./modules/enrollment/routes/enrollment-routes.js"
+
 import envConfig from "./shared/config_env/env-variables-config.js"
 
 const app = express();
@@ -76,6 +78,10 @@ app.use("/api/lessons/media", lessonManagementRoutes)
 
 // save data to lesson
 app.use("/api/lessons", lessonManagementRoutes)
+
+// Enrollment____________________________________________________________________________________________________________________________________________________________________
+
+app.use('/api/courses', enrollmentRoutes)
 
 
 /************* Global Error Handler Middleware **********/
