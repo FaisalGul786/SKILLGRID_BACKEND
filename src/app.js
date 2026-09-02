@@ -20,7 +20,7 @@ const app = express();
 app.set("trust proxy", 1);
 
 const reqOrigin = envConfig.NODE_ENV === 'development' ? "http://localhost:3000" : envConfig.clientURL
-console.log(`reqOrigin => `, reqOrigin)
+
 app.use(cors({
 	origin: reqOrigin,
 	methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
