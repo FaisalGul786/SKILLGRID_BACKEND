@@ -58,7 +58,7 @@ export const getMediaUploadSignature = async(req,res) => {
 */
 
 export const addLessonDataFull = async(req,res) => {
-	const { publicId, resourceType, mainUrl, duration, lessonNo, courseId } = req.body
+	const { publicId, resourceType, mainUrl, duration, courseId, lessonNo } = req.body
 	const { lessonId } = req.params;
 
 

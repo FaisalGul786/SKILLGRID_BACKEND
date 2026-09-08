@@ -56,6 +56,34 @@ export const createCourseService = async(course, instructorId) => {
 	return courseData
 }
 
+/*
+* fetch courses owned by Instructor
+*/
+
+export const fetchInstructorCoursesService = async(instructorId,page, limit, skip) => {
+	// Get total count of THIS instructor's courses
+	const courseCount = await courseManagementRepository.instructorCoursesCount(instructorId)
+
+	// Fetch only the sliced 4 courses
+    const coursesData = await courseManagementRepository.fetchInstructorCoursesData(instructorId,skip,limit)
+
+    const totalPages = Math.ceil(courseCount / limit)
+
+    logger(`\n\n ****** total pages `, totalPages)
+
+    return (
+    {
+    	totalCoursesCount: courseCount,
+    	coursesData,
+    	totalPages,
+    	currentPage: page
+    })
+
+}
+
+
+
+
 
 /*
 * Fetch courses
