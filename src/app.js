@@ -64,8 +64,11 @@ app.use("/api/media/upload", courseManagementRoutes)
 // Instructor create course
 app.use("/api/course", courseManagementRoutes)
 
-// get all courses cataloge
-app.use("/api/courses", courseManagementRoutes)
+// Fetch courses owned by Instructor not all 
+app.use("/api/instructor/courses", courseManagementRoutes)
+
+// get all courses cataloge For student
+app.use("/api/student", courseManagementRoutes)
 
 // fetch course lessons
 app.use("/api/courses", courseManagementRoutes)

@@ -30,6 +30,41 @@ export const createCourse = async(course, instructorId) => {
     return courseData
 }
 
+
+/*
+* Total Instructor courses count
+*/
+
+export const instructorCoursesCount = async(instructorId) => {
+    const totalCount = await db.select({ count: count() })
+    .from(courses)
+    .where(eq(courses.instructorId, instructorId));
+
+    logger(`\n\n **** courses count total `, totalCount)
+
+    return totalCount[0]?.count
+}
+
+
+/*
+* Fetch Instructor courses
+*/
+export const fetchInstructorCoursesData = async(instructorId, skip, limit) => {
+
+    const coursesData = await db
+    .select()
+    .from(courses)
+    .where(eq(courses.instructorId, instructorId))
+    .orderBy(asc(courses.id)) 
+    .limit(limit)
+    .offset(skip);
+
+    logger(`\n\n **** instructor courses`, coursesData)
+
+    return coursesData
+}
+
+
 /*
 * Total courses count
 */

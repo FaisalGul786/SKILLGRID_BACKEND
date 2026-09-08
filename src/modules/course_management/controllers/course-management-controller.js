@@ -55,6 +55,43 @@ export const createCourse  = async(req,res) => {
 
 
 /*
+* Fetch courses owned by Instructor
+*/
+
+export const fetchInstructorCourses = async(req,res) => {
+	const instructorId = req.user.userId; 
+	const page = parseInt(req.query.page) || 1;
+	const limit = parseInt(req.query.limit) || 4;
+	const skip = (page - 1) * limit;
+
+	logger(`instructorId ** page ** limit ** skip ** `, {
+		instructorId,
+		page,
+		limit,
+		skip
+	})
+
+	const { totalCoursesCount, coursesData, totalPages, currentPage} = await courseManagementService.fetchInstructorCoursesService(instructorId,page, limit, skip)
+
+	logger(`\n\n\n totalCoursesCount, coursessData, totalPages, currentPage`, {
+		totalCoursesCount, coursesData, totalPages, currentPage
+	})
+
+	return res.status(200).json({
+		success: true,
+		message: "All courses owned by instructor ...",
+		courseDetails: {
+			totalCoursesCount, coursesData, totalPages, currentPage
+		}
+	})
+
+}
+
+
+
+
+
+/*
 * get courses
 */
 

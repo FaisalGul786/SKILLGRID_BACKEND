@@ -12,7 +12,7 @@ const router = Router();
 
  router.post("/:courseId/lessons", authenticate, authorize("lesson:create"),lessonManagementController.addLessonsToCourse)
 
- router.get("/upload/signature", authenticate, authorize("media:upload"), lessonManagementController.getMediaUploadSignature)
+ router.post("/upload/signature", authenticate, authorize("media:upload"), lessonManagementController.getMediaUploadSignature)
 
 // # save lesson data fully
 
