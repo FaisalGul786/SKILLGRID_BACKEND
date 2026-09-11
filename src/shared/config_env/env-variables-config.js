@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env.development" })
 
 const envConfig = {
+	DATABASE_URL: process.env.DATABASE_URL,
 	DATABASE_URL_DIRECT: process.env.DATABASE_URL_DIRECT,
 	SECRET_KEY: process.env.SECRET_KEY,
 	NODE_ENV: process.env.NODE_ENV,
