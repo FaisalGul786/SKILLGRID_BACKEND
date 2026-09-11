@@ -14,6 +14,8 @@ import lessonManagementRoutes from "./modules/lesson_management/routes/lesson-ma
 
 import enrollmentRoutes from "./modules/enrollment/routes/enrollment-routes.js"
 
+import quizManagementRoutes from "./modules/quiz_management/routes/quiz-management-routes.js"
+
 import envConfig from "./shared/config_env/env-variables-config.js"
 
 const app = express();
@@ -85,6 +87,17 @@ app.use("/api/lessons", lessonManagementRoutes)
 // Enrollment____________________________________________________________________________________________________________________________________________________________________
 
 app.use('/api/courses', enrollmentRoutes)
+
+// Quiz-MANAGEMENT____________________________________________________________________________________________________________________________________________
+
+// Instructor create quiz as draft / students & instructor list course quizzes
+app.use("/api/courses", quizManagementRoutes)
+
+// Instructor list quizzes for a course they own
+app.use("/api/instructor/courses", quizManagementRoutes)
+
+// save quiz questions, fetch quiz, student submit attempt
+app.use("/api/quizzes", quizManagementRoutes)
 
 
 /************* Global Error Handler Middleware **********/
