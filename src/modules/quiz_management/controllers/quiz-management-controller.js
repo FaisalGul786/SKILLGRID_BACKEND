@@ -13,9 +13,9 @@ export const addQuizToCourse = async(req,res) => {
 
 	logger("\n course ID ******** ", courseId)
 
-	const {title, description, duration, totalMarks, passingScore} = req.body;
+	const {title, description, duration, totalMarks, passingScore, dueDate} = req.body;
 	
-	logger(`\n title ******** ${title} \n \n ******** description ${description}******** duration ${duration} ******** totalMarks ${totalMarks} passingScore ******** `, passingScore)
+	logger(`\n title ******** ${title} \n \n ******** description ${description}******** duration ${duration} ******** totalMarks ${totalMarks} passingScore ******** ${passingScore} \n\n ******** dueDate`, dueDate)
 
 	const InstructorId = req.user.userId;
 
