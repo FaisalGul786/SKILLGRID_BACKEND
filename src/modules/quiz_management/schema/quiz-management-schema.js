@@ -34,6 +34,8 @@ import {
     totalMarks: decimal('total_marks', { precision: 5, scale: 2 }),
     passingScore: decimal('passing_score', { precision: 5, scale: 2 }),
     
+    dueDate: timestamp('due_date', { withTimezone: true }).notNull(),
+
     isPublished: quizStatusEnum('is_published').notNull().default('Draft'),
     
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

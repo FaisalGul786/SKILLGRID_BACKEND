@@ -53,6 +53,7 @@ export const addQuiz = async(quiz, instructorId, courseId) => {
         title: quiz.title,
         description: quiz.description,
         durationMinutes: quiz.duration,
+        dueDate: new Date(quiz.dueDate),
         totalMarks: quiz.totalMarks,
         passingScore: quiz.passingScore,
         courseId,
