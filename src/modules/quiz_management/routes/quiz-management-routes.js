@@ -14,12 +14,16 @@ const router = Router();
 
  router.get("/:courseId/quizzes", authenticate, quizManagementController.listCourseQuizzes)
 
+ router.get("/:courseId/quizzes/:quizId/attempt", authenticate, quizManagementController.fetchQuestionOptionForQuizAttempt)
+
+ router.post("/:courseId/quizzes/:quizId/attempt", authenticate, quizManagementController.markQuizAttempt)
+
+ // Add PATCH endpoint for Redis draft options sync
+router.patch("/:courseId/quizzes/:quizId/attempt/draft", authenticate, quizManagementController.saveQuizDraft)
+
 // # save quiz questions fully
 
  router.post("/:quizId", authenticate, authorize("quiz:question_manage"), quizManagementController.addQuizDataFull)
 
- router.get("/:quizId", authenticate, quizManagementController.fetchQuiz)
-
- router.post("/:quizId/attempts", authenticate, quizManagementController.submitQuizAttempt)
 
 export default router;
