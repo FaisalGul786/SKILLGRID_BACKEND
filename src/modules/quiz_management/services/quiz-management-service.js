@@ -4,6 +4,8 @@ import {logger} from "../../../shared/utils/logger.js"
 
 import {AppError} from "../../../shared/errors/app-error.js"
 
+import {QuizDraftService} from "../../../external_services/upstash_redis_service/upstash-redis-draft.js"
+
 
 /*
 * add quiz
@@ -43,10 +45,10 @@ export const addQuizData = async(data, quizId, instructorId, courseId) =>{
 	const isOwner = await quizManagementRepository.findOwnedCourse(courseId, instructorId)
 
 	if(!isOwner) {
-			throw new AppError("Unauthorized: You do not own this course or it does not exist", 403)
-		}
+		throw new AppError("Unauthorized: You do not own this course or it does not exist", 403)
+	}
 
-		const fullQuiz = await quizManagementRepository.addFullQuizData(data, quizId, instructorId, courseId)
+	const fullQuiz = await quizManagementRepository.addFullQuizData(data, quizId, instructorId, courseId)
 
 
 	return fullQuiz
@@ -57,128 +59,215 @@ export const addQuizData = async(data, quizId, instructorId, courseId) =>{
 * list quizzes for a course
 */
 
-export const listCourseQuizzesService = async(courseId, userId) => {
-	const ownedCourse = await quizManagementRepository.findOwnedCourse(courseId, userId)
+export const listCourseQuizzesService = async(studentId, quizStatus, courseId) => {
 
-	if(ownedCourse) {
-		const quizzesData = await quizManagementRepository.listCourseQuizzes(courseId, false)
+	if (courseId) {
+		const isEnrolled = await quizManagementRepository.StudentQuizRepository.isStudentEnrolled(studentId, courseId);
 
-		return {
-			isOwner: true,
-			quizzes: quizzesData
+		logger(`\n\n isEnrolled`, isEnrolled)
+
+		if (!isEnrolled) {
+			throw new AppError('Access denied. You are not enrolled in this course.', 403)
 		}
 	}
 
-	const isEnrolled = await quizManagementRepository.findEnrollment(courseId, userId)
+	logger(`test line ***`)
 
-	if(!isEnrolled) {
-		throw new AppError("Unauthorized: Enroll in this course to view quizzes.", 403)
-	}
+	const [counts, quizzes] = await Promise.all([
+		quizManagementRepository.StudentQuizRepository.getQuizCounts(studentId, courseId),
+		quizManagementRepository.StudentQuizRepository.getQuizzesByStatus(studentId, quizStatus, courseId),
+	]);
 
-	const quizzesData = await quizManagementRepository.listCourseQuizzes(courseId, true)
 
-	return {
-		isOwner: false,
-		quizzes: quizzesData
-	}
+	return { counts, quizzes };
 }
 
 
 /*
-* fetch one quiz with questions
+* fetch 1 quiz with questions, calculate exact quiz timer, retrieve redis batch draft
 */
 
-export const fetchQuizService = async(quizId, userId) => {
-	const quiz = await quizManagementRepository.findQuizById(quizId)
+export const getQuizAttempt = async(studentId, courseId, quizId) => {
+	
+	// ✅ Verify Enrollment
+	const isEnrolled = await quizManagementRepository.StudentQuizRepository.isStudentEnrolled(studentId, courseId);
 
-	if(!quiz) {
-		throw new AppError("Quiz does not exist.", 404)
+	logger(`isEnrolled ---- `, isEnrolled)
+
+	if (!isEnrolled) {
+		throw new AppError('You are not enrolled in this course.', 403)
 	}
 
-	const ownedCourse = await quizManagementRepository.findOwnedCourse(quiz.courseId, userId)
-	const isOwner = Boolean(ownedCourse)
+	// ✅ Verify Duplicate Attempts
+	const existingAttempt = await quizManagementRepository.StudentQuizRepository.getExistingAttempt(studentId, quizId);
 
-	if(!isOwner) {
-		const isEnrolled = await quizManagementRepository.findEnrollment(quiz.courseId, userId)
+	logger(`existingAttempt ---- `, existingAttempt)
 
-		if(!isEnrolled) {
-			throw new AppError("Unauthorized: Enroll in this course to view this quiz.", 403)
-		}
-
-		if(!quiz.isPublished) {
-			throw new AppError("Quiz is not published yet.", 403)
-		}
+	if (existingAttempt && existingAttempt.status === 'submitted') {
+		throw new AppError('You have already submitted this quiz.', 400)
 	}
 
-	const questions = await quizManagementRepository.findQuizQuestionsWithOptions(quizId)
+	// ✅ Fetch Quiz Question - options for Attempt 
+	const quiz = await quizManagementRepository.StudentQuizRepository.getQuizDetailsForAttempt(courseId, quizId);
 
-	const safeQuestions = isOwner
-		? questions
-		: questions.map((question) => ({
-			...question,
-			options: question.options.map(({ isCorrect, ...option }) => option)
-		}))
+
+	logger(`quiz data for attempt ----- `, quiz)
+
+	if (!quiz) {
+		throw new AppError('Quiz not found or unavailable.', 404)
+	}
+
+	// ✅ Check its dueDate < now
+
+	if (new Date() > new Date(quiz.dueDate)) {
+		throw new AppError('The deadline for this quiz has passed.', 400);
+	}
+
+	// ✅ Start or Fetch Attempt in PostgreSQL for timer or rejoin quiz attempt
+	const attempt = await quizManagementRepository.StudentQuizRepository.startOrGetAttempt(studentId, quizId);
+	logger(`\n\n\n Did person re-join quiz attempt ? \n reason 👉 `, attempt)
+
+	if (attempt.status === 'submitted') {
+		throw new AppError('You have already submitted this quiz.', 400);
+	}
+
+	// ✅ Server-Side Quiz Timer Calculation
+	const now = new Date();
+	const startTime = new Date(attempt.createdAt);
+	const elapsedSeconds = Math.floor((now - startTime) / 1000);
+	const totalDurationSeconds = quiz.duration * 60;
+	const remainingSeconds = totalDurationSeconds - elapsedSeconds;
+
+	logger(`\n now >>>> ${now} \n\n start-time >>>> ${startTime} \n\n elapsedTimeInSeconds >>>> ${elapsedSeconds} \n\n totalDurationSeconds >>>> ${totalDurationSeconds} \n\n remainingSeconds >>>> `, remainingSeconds)
+
+	// ✅ Auto-expire if student returns after time limit
+	if (remainingSeconds <= 0) {
+		await quizManagementRepository.StudentQuizRepository.submitQuizAttempt(
+		{
+			studentId,
+			quizId,
+			status: 'submitted',
+			obtainedMarks: '0',
+			isPassed: 'failed',
+		},
+		[]
+		);
+
+		await QuizDraftService.clearDraft(studentId, quizId);
+		throw new AppError('Quiz duration has expired. Attempt auto-submitted.', 400);
+
+	}
+
+	// ✅ Fetch temprary answers from Redis to send back as response
+	const savedAnswers = await QuizDraftService.getDraft(studentId, quizId);
 
 	return {
-		isOwner,
-		quiz,
-		questions: safeQuestions
-	}
+		...quiz,
+		remainingSeconds,
+		savedAnswers,
+	};
+
 }
 
 
 /*
-* submit quiz attempt
+* quiz submit / mark & clear Redis
 */
+export const evaluateAndSubmit = async(studentId, courseId, quizId, submittedAnswers) => {
 
-export const submitQuizAttemptService = async(quizId, userId, answers) => {
-	if(!Array.isArray(answers) || answers.length < 1) {
-		throw new AppError("Answers are required.", 400)
+	// ✅ Check if an attempt already exists (prevent double submission)
+	const existingAttempt = await quizManagementRepository.StudentQuizRepository.getExistingAttempt(studentId, quizId);
+
+	logger(`\n existingAttempt ---- `, existingAttempt)
+
+	if (existingAttempt && existingAttempt.status === 'submitted') {
+
+		throw new AppError('Quiz has already been submitted.', 400)
+
 	}
 
-	const quiz = await quizManagementRepository.findQuizById(quizId)
+	// ✅ Fetch Truth Data
+	const markingData = await quizManagementRepository.StudentQuizRepository.getQuizMarkingData(quizId);
 
-	if(!quiz) {
-		throw new AppError("Quiz does not exist.", 404)
+	logger('\n\n markingData --- ', markingData)
+
+	if (!markingData) {
+		throw new AppError('Quiz not found.', 404)
 	}
 
-	if(!quiz.isPublished) {
-		throw new AppError("Quiz is not published yet.", 403)
-	}
+	const { quiz, questions, correctOptions } = markingData;
 
-	const isEnrolled = await quizManagementRepository.findEnrollment(quiz.courseId, userId)
+	// Create lookup maps for fast access
+	const correctMap = new Map(correctOptions.map((opt) => [opt.questionId, opt.id]));
+	const pointMap = new Map(questions.map((q) => [q.id, q.point]));
 
-	if(!isEnrolled) {
-		throw new AppError("Unauthorized: Enroll in this course to attempt this quiz.", 403)
-	}
+	let obtainedMarks = 0;
+	const evaluatedAnswers = [];
 
-	const questions = await quizManagementRepository.findQuizQuestionsWithOptions(quizId)
+	//  Evaluate each answer
+	for (const answer of submittedAnswers) {
+		const correctOptionId = correctMap.get(answer.questionId);
+		const isCorrect = correctOptionId === answer.selectedOptionId;
+		const pointValue = pointMap.get(answer.questionId) || 0;
 
-	if(questions.length < 1) {
-		throw new AppError("Quiz has no questions yet.", 400)
-	}
-
-	const answersByQuestionId = new Map(
-		answers.map((answer) => [answer.questionId, answer.optionId])
-	)
-
-	let score = 0
-
-	for (const question of questions) {
-		const selectedOptionId = answersByQuestionId.get(question.id)
-		const selectedOption = question.options.find((option) => option.id === selectedOptionId)
-
-		if(selectedOption?.isCorrect) {
-			score += 1
+		if (isCorrect) {
+			obtainedMarks += pointValue;
 		}
+
+		evaluatedAnswers.push({
+			quizQuestionId: answer.questionId,
+			quizQuestionOptionId: answer.selectedOptionId,
+			isCorrect,
+		});
 	}
 
-	const attempt = await quizManagementRepository.createQuizAttempt(
+	// Validation: Ensure obtained marks do not exceed total marks
+	const totalMarks = Number(quiz.totalMarks);
+	if (obtainedMarks > totalMarks) {
+		throw new AppError('Calculated score exceeds total quiz marks. Data inconsistency detected.', 500)
+
+	}
+
+	//  Calculate Pass/Fail Status
+	const percentage = totalMarks > 0 ? (obtainedMarks / totalMarks) * 100 : 0;
+	const isPassed = percentage >= Number(quiz.passingScore) ? 'passed' : 'failed';
+
+	//  ✅ Execute Transaction
+	const attemptData = {
+		studentId,
 		quizId,
-		userId,
-		score,
-		questions.length
-	)
+		status: 'submitted',
+		obtainedMarks: obtainedMarks.toString(),
+		isPassed,
+	};
 
-	return attempt
+	const savedAttempt = await quizManagementRepository.StudentQuizRepository.submitQuizAttempt(
+		attemptData,
+		evaluatedAnswers
+		);
+	
+	// Clear temporary Redis key after successful SQL commit
+	await QuizDraftService.clearDraft(studentId, quizId);
+
+	 // Return summary for the frontend
+	return {
+		obtained: Number(savedAttempt.obtainedMarks),
+		total: totalMarks,
+		isPassed: savedAttempt.isPassed,
+		passingScore: Number(quiz.passingScore),
+	};
+
+
 }
+
+
+/*
+* Save temporary batch answers to Redis
+*/
+export const saveDraftBatch = async (studentId, quizId, answers) => {
+	const existingAttempt = await quizManagementRepository.StudentQuizRepository.getExistingAttempt(studentId, quizId);
+	if (existingAttempt && existingAttempt.status === 'submitted') {
+		return;
+	}
+	await QuizDraftService.saveDraft(studentId, quizId, answers);
+};

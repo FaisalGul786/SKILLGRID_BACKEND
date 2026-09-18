@@ -14,7 +14,7 @@ import {logger} from "../../../shared/utils/logger.js"
 export const getMediaUploadSignature = async(req,res) => {
 	const {signature, timestamp, folder} = await courseManagementService.generateMediaUploadSignatureService();
 
-	logger(`signature => ${signature} ------ timestamp => ${timestamp} ------- \n folder => `, folder)
+	logger(`signature => ${signature} ------ timestamp => ${timestamp} ------- \n folder => 🎉🎉🎉🎉🎉🎉||||`, folder)
 
 	res.status(200).json({
 		success: true,

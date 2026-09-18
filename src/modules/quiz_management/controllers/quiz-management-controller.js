@@ -72,52 +72,79 @@ export const addQuizDataFull = async(req,res) => {
 export const listCourseQuizzes = async(req,res) => {
 	const { courseId } = req.params;
 	const userId = req.user.userId;
+	const status  = ( req.query.status || pending).toLowerCase();
 
-	const { isOwner, quizzes } = await quizManagementService.listCourseQuizzesService(courseId, userId)
+	logger(`\n\n\n course_id: ${courseId} \n\n\n student_id:${userId} \n status: ${status}`)
+
+
+	const data = await quizManagementService.listCourseQuizzesService(userId, status, courseId)
+	logger(`\n\n\n [counts, quizzes] ---- `, data)
 
 	return res.status(200).json({
 		success: true,
 		message: "Quizzes data ...",
-		isOwner,
-		quizzes
+		quizList: data
 	})
 }
 
-
 /*
-* fetch one quiz
+* fetch one quiz question / options
 */
 
-export const fetchQuiz = async(req,res) => {
-	const { quizId } = req.params;
-	const userId = req.user.userId;
+export const fetchQuestionOptionForQuizAttempt = async(req,res) => {
 
-	const { isOwner, quiz, questions } = await quizManagementService.fetchQuizService(quizId, userId)
+	const studentId = req.user?.userId;
+	const { courseId, quizId } = req.params;
+
+	logger(`\n\n\n --- studentId * ${studentId} ---- courseId * ${courseId} --- quizId * `, quizId)
+
+	const quizData = await quizManagementService.getQuizAttempt(studentId, courseId, quizId);
+
+	logger(`\n\n quiz attempt data ----- `, '')
+	console.dir(quizData, { depth: null, colors: true });
 
 	return res.status(200).json({
 		success: true,
-		message: "Quiz data ...",
-		isOwner,
-		quiz,
-		questions
+		message: 'Quiz attempt data . . .',
+		quizAttemptData: quizData
 	})
 }
 
 
 /*
-* submit quiz attempt
+* mark quiz submitted
+*/
+export const markQuizAttempt = async(req,res) => {
+	const studentId = req.user?.userId;
+    const { courseId, quizId } = req.params;
+    const { answers } = req.body;
+
+    logger(`\n\n\n --- studentId * ${studentId} \n ---- courseId * ${courseId} \n--- quizId * ${quizId} \n----- answers * `, answers)
+
+    const result = await quizManagementService.evaluateAndSubmit(
+      studentId, 
+      courseId, 
+      quizId, 
+      answers
+    );
+
+    logger(`quiz Marked --- `, result)
+
+    return res.status(200).json({ success: true, message: 'Quiz submitted successfully',  result});
+}
+
+
+/*
+* sync options in redis -- temporary -- autsave
 */
 
-export const submitQuizAttempt = async(req,res) => {
-	const { quizId } = req.params;
-	const userId = req.user.userId;
-	const { answers } = req.body;
+export const saveQuizDraft = async (req, res) => {
+  const studentId = req.user?.userId;
+  const { quizId } = req.params;
+  const { answers } = req.body;
 
-	const attempt = await quizManagementService.submitQuizAttemptService(quizId, userId, answers)
+  logger(`\n\n\n --- studentId * ${studentId} \n \n--- quizId * ${quizId} \n----- answers * `, answers)
 
-	return res.status(201).json({
-		success: true,
-		message: "Quiz attempt submitted 🎉",
-		attempt
-	})
-}
+  await quizManagementService.saveDraftBatch(studentId, quizId, answers);
+  return res.status(200).json({ success: true, message: 'Draft batch synced.' });
+};

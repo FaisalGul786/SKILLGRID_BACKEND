@@ -60,7 +60,7 @@ app.use("/api/auth", authRoutes)
 
 // COURSE-MANAGEMENT____________________________________________________________________________________________________________________________________________
 
-// Instructor gets signature to directly upload media
+// Instructor gets signature to directly upload media ( image)
 app.use("/api/media/upload", courseManagementRoutes)
 
 // Instructor create course
@@ -93,11 +93,13 @@ app.use('/api/courses', enrollmentRoutes)
 // Instructor create quiz as draft / students & instructor list course quizzes
 app.use("/api/courses", quizManagementRoutes)
 
-// Instructor list quizzes for a course they own
+
+// Student fetches quizzes list / fetches questions - options for quiz attempt / mark quiz attempt / save options in redis
+app.use("/api/student/courses", quizManagementRoutes)
+
+// Instructor  quizzes for a course they own
 app.use("/api/instructor/courses", quizManagementRoutes)
 
-// save quiz questions, fetch quiz, student submit attempt
-app.use("/api/quizzes", quizManagementRoutes)
 
 
 /************* Global Error Handler Middleware **********/
