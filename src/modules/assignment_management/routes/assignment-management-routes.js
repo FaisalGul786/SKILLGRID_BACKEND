@@ -5,6 +5,8 @@ import authorize from "../../../shared/middleware/authorize.js";
 
 const router = Router();
 
+// --- Instructor Routes ---
+
 // Route to get Cloudinary signature for assignment PDF uploads
 router.get(
   "/:courseId/assignments/signature",
@@ -20,5 +22,32 @@ router.post(
   authorize("assignment:create"),
   assignmentManagementController.addAssignmentToCourse
 );
+
+/* 
+*  --- Student Routes ---
+*
+*/
+
+// Get all published assignments and current submission statuses
+router.get(
+  "/:courseId/assignments",
+  authenticate,
+  assignmentManagementController.getCourseAssignments
+);
+
+// Get signature to upload directly to Cloudinary
+router.get(
+  "/:courseId/assignments/:assignmentId/submissions/signature",
+  authenticate,
+  assignmentManagementController.generateStudentSubmissionSignature
+);
+
+// Save or Update submission record in Database
+router.post(
+  "/:courseId/assignments/:assignmentId/submissions",
+  authenticate,
+  assignmentManagementController.submitOrResubmitAssignment
+);
+
 
 export default router;

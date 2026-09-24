@@ -104,7 +104,7 @@ app.use("/api/instructor/courses", quizManagementRoutes)
 
 // Assignment-MANAGEMENT____________________________________________________________________________________________________________________________________________
 
-// Instructor create assignment as draft
+// Instructor create assignment as draft/published, student fetch assignments and make submissions
 app.use("/api/courses", assignmentManagementRoutes)
 
 

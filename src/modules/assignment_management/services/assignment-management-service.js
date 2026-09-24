@@ -63,3 +63,68 @@ export const addAssignmentToCourseService = async (courseId, instructorId, data)
 
 	return await assignmentManagementRepository.addAssignment(payload);
 };
+
+
+export const getCourseAssignmentsForStudentService = async (courseId, studentId) => {
+    const results = await assignmentManagementRepository.getAssignmentsWithStudentSubmission(courseId, studentId);
+
+    return results.map(row => {
+        return {
+            ...row.assignment,
+            attachmentUrl: row.assignment.attachmentUrl,
+            submission: row.submission || null
+        };
+    });
+};
+
+export const generateStudentSubmissionSignatureService = async (courseId, assignmentId, studentId) => {
+    const assignment = await assignmentManagementRepository.getAssignmentById(assignmentId);
+    
+    if (!assignment || assignment.status !== 'Published') {
+        throw new AppError("Assignment not found or not available.", 404);
+    }
+
+    if (assignment.dueDate && new Date(assignment.dueDate).getTime() <= Date.now()) {
+        throw new AppError("Due date has passed. Submissions are closed.", 403);
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000);
+    const folder = "assignment_submissions";
+    const public_id = `${courseId}_${assignmentId}_${studentId}`; // Deterministic mapping for overwrite
+
+    const signature = cloudinary.utils.api_sign_request(
+        { timestamp, folder, public_id, overwrite: true },
+        envConfig.CLOUDINARY_API_SECRET
+    );
+
+    return { 
+        signature, 
+        timestamp, 
+        folder, 
+        public_id,
+        apiKey: envConfig.CLOUDINARY_API_KEY, 
+        cloudName: envConfig.CLOUDINARY_CLOUD_NAME 
+    };
+};
+
+export const submitOrResubmitAssignmentService = async (courseId, assignmentId, studentId, data) => {
+    const assignment = await assignmentManagementRepository.getAssignmentById(assignmentId);
+    
+    if (!assignment || assignment.status !== 'Published') {
+        throw new AppError("Assignment not found or not available.", 404);
+    }
+
+    if (assignment.dueDate && new Date(assignment.dueDate).getTime() <= Date.now()) {
+        throw new AppError("Due date has passed. Submissions are closed.", 403);
+    }
+
+    const payload = {
+        assignmentId,
+        studentId,
+        assignmentUrl: data.assignmentUrl,
+        cloudinaryPublicId: data.cloudinaryPublicId,
+        cloudinaryResourceType: data.cloudinaryResourceType // Mapping the new field
+    };
+
+    return await assignmentManagementRepository.upsertStudentSubmission(payload);
+};
