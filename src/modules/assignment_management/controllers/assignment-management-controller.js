@@ -72,3 +72,37 @@ export const submitOrResubmitAssignment = async (req, res) => {
         data: submission
     });
 };
+
+
+
+export const getInstructorSubmissions = async (req, res) => {
+    const { courseId } = req.params;
+    const instructorId = req.user.userId;
+
+    logger(`courseId >> instructorId >> ${courseId} `, instructorId)
+
+    const submissions = await assignmentManagementService.getInstructorSubmissionsService(courseId, instructorId);
+
+    logger(`submissions >> `, submissions)
+
+    res.status(200).json({ 
+        success: true, 
+        data: submissions 
+    });
+};
+
+
+
+export const gradeSubmission = async (req, res) => {
+    const { submissionId } = req.params;
+    const instructorId = req.user.userId;
+    const gradeData = req.body;
+
+    const updatedSubmission = await assignmentManagementService.gradeStudentSubmissionService(submissionId, instructorId, gradeData);
+
+    res.status(200).json({ 
+        success: true, 
+        message: "Grade saved successfully.", 
+        data: updatedSubmission 
+    });
+};

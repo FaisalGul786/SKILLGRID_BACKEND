@@ -23,6 +23,25 @@ router.post(
   assignmentManagementController.addAssignmentToCourse
 );
 
+// Get all submissions for a specific assignment
+router.get(
+  "/:courseId/submissions",
+  authenticate,
+  authorize("assignment:grade"),
+  assignmentManagementController.getInstructorSubmissions
+);
+
+// Save grade and feedback for a student submission
+router.patch(
+  "/assignments/submissions/:submissionId",
+  authenticate,
+  authorize("assignment:grade"),
+  assignmentManagementController.gradeSubmission
+);
+
+
+
+
 /* 
 *  --- Student Routes ---
 *

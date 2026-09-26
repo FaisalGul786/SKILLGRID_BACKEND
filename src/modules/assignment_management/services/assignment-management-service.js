@@ -128,3 +128,58 @@ export const submitOrResubmitAssignmentService = async (courseId, assignmentId, 
 
     return await assignmentManagementRepository.upsertStudentSubmission(payload);
 };
+
+
+export const getInstructorSubmissionsService = async (courseId, instructorId) => {
+    const records = await assignmentManagementRepository.getSubmissionsForInstructor(courseId, instructorId);
+
+    logger(`record submissions >> `, records)
+    
+    // Flatten structure for the frontend UI
+    return records.map(record => ({
+        id: record.submission.id,
+        student: record.student,
+        assignmentUrl: record.submission.assignmentUrl,
+        status: record.submission.status,
+        obtainedMarks: record.submission.obtainedMarks || 0,
+        feedback: record.submission.feedback || '',
+        isPassed: record.submission.isPassed || false,
+        submittedAt: record.submission.submittedAt,
+        gradedAt: record.submission.gradedAt,
+        totalMarks: record.assignment.assignmentMarks
+    }));
+};
+
+
+
+
+
+export const gradeStudentSubmissionService = async (submissionId, instructorId, data) => {
+    
+    const record = await assignmentManagementRepository.getSubmissionWithAssignmentById(submissionId);
+
+    if (!record) {
+        throw new AppError("Submission not found.", 404);
+    }
+    
+    if (record.assignment.instructorId !== instructorId) {
+        throw new AppError("Unauthorized. You do not own this assignment.", 403);
+    }
+
+    if (data.obtainedMarks < 0 || data.obtainedMarks > record.assignment.assignmentMarks) {
+        throw new AppError(`Marks must be between 0 and ${record.assignment.assignmentMarks}.`, 400);
+    }
+
+    const payload = {
+        obtainedMarks: data.obtainedMarks,
+        feedback: data.feedback,
+        isPassed: data.isPassed,
+        status: 'graded',
+        gradedAt: new Date()
+    };
+
+    return await assignmentManagementRepository.updateSubmissionGrade(submissionId, payload);
+};
+
+
+
