@@ -2,6 +2,7 @@ import { db } from "../../../shared/database/config/db-connection.js";
 import { assignments } from "../schema/assignment-schema.js";
 import {assignmentSubmissions} from "../schema/assignment-submissions-schema.js";
 import { eq, and } from "drizzle-orm";
+import {users} from "../../authentication/schema/authentication-schema.js";
 import {logger} from "../../../shared/utils/logger.js";
 
 export const addAssignment = async (assignmentPayload) => {
@@ -68,4 +69,79 @@ export const upsertStudentSubmission = async (payload) => {
         })
         .returning();
     return submission;
+};
+
+
+export const getSubmissionsForInstructor = async (courseId, instructorId) => {
+    return await db
+        .select({
+            submission: assignmentSubmissions,
+            student: {
+                id: users.id,
+                userName: users.userName,
+                email: users.email
+            },
+            assignment: {
+                id: assignments.id,
+                assignmentMarks: assignments.assignmentMarks
+            }
+        })
+        .from(assignmentSubmissions)
+        .innerJoin(assignments, eq(assignmentSubmissions.assignmentId, assignments.id))
+        .innerJoin(users, eq(assignmentSubmissions.studentId, users.id))
+        .where(
+            and(
+                eq(assignments.courseId, courseId), 
+                eq(assignments.instructorId, instructorId)
+            )
+        );
+};
+
+
+export const getSubmissionWithAssignmentById = async (submissionId) => {
+    const [record] = await db
+        .select({
+            submission: assignmentSubmissions,
+            assignment: assignments
+        })
+        .from(assignmentSubmissions)
+        .innerJoin(assignments, eq(assignmentSubmissions.assignmentId, assignments.id))
+        .where(eq(assignmentSubmissions.id, submissionId));
+    
+    return record;
+};
+
+export const getSubmissionsByCourseId = async (courseId, instructorId) => {
+  return await db
+    .select({
+      submission: assignmentSubmissions,
+      student: {
+        id: users.id,
+        name: users.name,
+        email: users.email,
+      },
+      assignment: {
+        id: assignments.id,
+        assignmentMarks: assignments.assignmentMarks,
+      },
+    })
+    .from(assignmentSubmissions)
+    .innerJoin(assignments, eq(assignmentSubmissions.assignmentId, assignments.id))
+    .innerJoin(users, eq(assignmentSubmissions.studentId, users.id))
+    .where(
+      and(
+        eq(assignments.courseId, courseId),
+        eq(assignments.instructorId, instructorId)
+      )
+    );
+};
+
+export const updateSubmissionGrade = async (submissionId, payload) => {
+    const [updated] = await db
+        .update(assignmentSubmissions)
+        .set(payload)
+        .where(eq(assignmentSubmissions.id, submissionId))
+        .returning();
+        
+    return updated;
 };
