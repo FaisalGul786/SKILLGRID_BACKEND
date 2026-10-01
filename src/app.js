@@ -17,6 +17,8 @@ import enrollmentRoutes from "./modules/enrollment/routes/enrollment-routes.js"
 import quizManagementRoutes from "./modules/quiz_management/routes/quiz-management-routes.js"
 
 import assignmentManagementRoutes from "./modules/assignment_management/routes/assignment-management-routes.js"
+import lessonProgressRoutes from "./modules/course_progress/routes/course-progress-routes.js"
+import issueCertificateRoutes from "./modules/certificate/routes/certificate-routes.js"
 
 import envConfig from "./shared/config_env/env-variables-config.js"
 
@@ -106,6 +108,18 @@ app.use("/api/instructor/courses", quizManagementRoutes)
 
 // Instructor create assignment as draft/published, student fetch assignments and make submissions
 app.use("/api/courses", assignmentManagementRoutes)
+
+
+// COURSE-PROGRESS____________________________________________________________________________________________________________________________________________
+
+// student sees course progress / update progress / issue certificate
+
+app.use("/api/student/progress", lessonProgressRoutes)
+
+
+// CERTIFICATE____________________________________________________________________________________________________________________________________________
+
+app.use("/api/student/issue", issueCertificateRoutes)
 
 
 /************* Global Error Handler Middleware **********/

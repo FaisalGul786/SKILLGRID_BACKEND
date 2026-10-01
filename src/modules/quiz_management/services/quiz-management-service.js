@@ -5,7 +5,7 @@ import {logger} from "../../../shared/utils/logger.js"
 import {AppError} from "../../../shared/errors/app-error.js"
 
 import {QuizDraftService} from "../../../external_services/upstash_redis_service/upstash-redis-draft.js"
-
+import { recalculateCourseProgress } from "../../course_progress/services/course-progress-service.js";
 
 /*
 * add quiz
@@ -154,6 +154,10 @@ export const getQuizAttempt = async(studentId, courseId, quizId) => {
 		);
 
 		await QuizDraftService.clearDraft(studentId, quizId);
+
+		// calculate course progress to allow certification
+		await recalculateCourseProgress(studentId, courseId)
+
 		throw new AppError('Quiz duration has expired. Attempt auto-submitted.', 400);
 
 	}
@@ -248,6 +252,9 @@ export const evaluateAndSubmit = async(studentId, courseId, quizId, submittedAns
 	
 	// Clear temporary Redis key after successful SQL commit
 	await QuizDraftService.clearDraft(studentId, quizId);
+
+	// calculate percentage to generate certificate ( module course progress)
+	await recalculateCourseProgress(studentId, courseId)
 
 	 // Return summary for the frontend
 	return {
