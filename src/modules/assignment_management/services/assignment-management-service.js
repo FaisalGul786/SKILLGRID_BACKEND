@@ -2,7 +2,7 @@ import * as assignmentManagementRepository from "../repositories/assignment-mana
 import { AppError } from "../../../shared/errors/app-error.js";
 import { v2 as cloudinary } from "cloudinary";
 import envConfig from "../../../shared/config_env/env-variables-config.js";
-
+import { recalculateCourseProgress } from "../../course_progress/services/course-progress-service.js";
 import {logger} from "../../../shared/utils/logger.js"
 
 cloudinary.config({
@@ -157,6 +157,7 @@ export const getInstructorSubmissionsService = async (courseId, instructorId) =>
 export const gradeStudentSubmissionService = async (submissionId, instructorId, data) => {
     
     const record = await assignmentManagementRepository.getSubmissionWithAssignmentById(submissionId);
+    logger(`assignment `, record)
 
     if (!record) {
         throw new AppError("Submission not found.", 404);
@@ -178,7 +179,16 @@ export const gradeStudentSubmissionService = async (submissionId, instructorId, 
         gradedAt: new Date()
     };
 
-    return await assignmentManagementRepository.updateSubmissionGrade(submissionId, payload);
+    
+    const updatedSubmission = await assignmentManagementRepository.updateSubmissionGrade(submissionId, payload);
+
+    const studentId = record.submission.studentId; 
+    const courseId = record.assignment.courseId;
+
+    // mark % to allow certification
+    await recalculateCourseProgress(studentId, courseId)
+
+    return updatedSubmission;
 };
 
 

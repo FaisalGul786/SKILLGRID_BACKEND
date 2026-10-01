@@ -1,4 +1,4 @@
-import { pgTable, uuid, timestamp, pgEnum, unique } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, timestamp, pgEnum, unique, decimal, boolean } from 'drizzle-orm/pg-core'
 import { users } from '../../authentication/schema/authentication-schema.js'
 import { courses } from '../../course_management/schema/course-management-schema.js'
 
@@ -17,6 +17,11 @@ export const enrollments = pgTable(
     .references(() => courses.id, { onDelete: 'cascade' }),
     courseType: courseTypeEnum('course_type').notNull(),
     isPaid: isPaidEnum('is_paid').default('unpaid').notNull(),
+    progressPercentage: decimal('progress_percentage', { precision: 5, scale: 2 })
+      .default('0.00')
+      .notNull(),
+    isCompleted: boolean('is_completed').default(false).notNull(),
+
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
     .defaultNow()
