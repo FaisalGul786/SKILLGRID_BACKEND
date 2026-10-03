@@ -2,6 +2,8 @@ import {db} from "../../../shared/database/config/db-connection.js"
 
 import {users} from "../schema/authentication-schema.js"
 
+import { instructorApplications } from "../schema/application-schema.js";
+
 import {eq, and} from "drizzle-orm"
 
 import {logger} from "../../../shared/utils/logger.js"
@@ -166,3 +168,28 @@ export const setNewPassword = async(email, newPassword) => {
 
    return;
 }
+
+
+/*
+* Instructor Application Queries
+*/
+export const checkExistingApplication = async (userId) => {
+    const existing = await db.select().from(instructorApplications)
+        .where(
+            and(
+                eq(instructorApplications.userId, userId),
+                eq(instructorApplications.status, "pending")
+            )
+        );
+    return existing;
+};
+
+export const createInstructorApplication = async (userId, notes) => {
+    const [application] = await db.insert(instructorApplications).values({
+        userId,
+        applicationNotes: notes,
+        status: "pending"
+    }).returning();
+    
+    return application;
+};

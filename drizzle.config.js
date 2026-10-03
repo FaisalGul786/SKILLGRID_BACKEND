@@ -1,20 +1,27 @@
 import { defineConfig } from "drizzle-kit";
 import dotenv from "dotenv";
+import path from "path";
 
-import path from "path"
 
-import envConfig  from "./src/shared/config_env/env-variables-config.js"
-
-// dotenv.config({path: ".env.development"})
 dotenv.config({ path: path.resolve(process.cwd(), ".env.development") });
 
-console.log("database direct for migrations: ", envConfig.DATABASE_URL_DIRECT);
+const databaseUrl = process.env.DATABASE_URL_DIRECT;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL_DIRECT is missing in .env.development");
+}
+
+console.log("Database direct URL for migrations loaded successfully.");
 
 export default defineConfig({
-  schema: ["./src/modules/**/*-schema.js", "./src/shared/access_control/schema/*.js"],
+  schema: [
+    "./src/modules/**/*-schema.js",
+    "./src/shared/access_control/schema/*.js",
+  ],
   out: "./drizzle/migrations",
   dialect: "postgresql",
   dbCredentials: {
-    url: envConfig.DATABASE_URL_DIRECT,
+    url: databaseUrl,
+    ssl: true,
   },
 });
