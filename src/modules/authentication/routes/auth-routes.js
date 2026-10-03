@@ -3,6 +3,8 @@ import {Router} from "express";
 
 import * as authController from "../controllers/auth-controller.js"
 
+import authenticate from "../../../shared/middleware/authenticate.js"
+
 
 const router = Router()
 
@@ -19,6 +21,8 @@ router.post("/forgot-password", authController.forgotPassword)
 router.post("/verify/forgot-password", authController.validateForgotPasswordOTP)
 
 router.patch("/update-password", authController.updatePassword)
+
+router.post("/apply-instructor",authenticate,  authController.applyForInstructorController);
 
 
 export default router;

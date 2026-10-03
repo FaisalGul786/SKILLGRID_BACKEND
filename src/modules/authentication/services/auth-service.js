@@ -304,3 +304,24 @@ export const updatePasswordService = async(newPassword, key) => {
 
 	return;
 }
+
+
+
+/*
+* Apply for Instructor Service
+*/
+export const applyForInstructorService = async (userId, applicationNotes) => {
+    // ✅ Check if the user already has a pending application
+    const existingApp = await authRepository.checkExistingApplication(userId);
+
+    if (existingApp.length > 0) {
+        throw new AppError("You already have a pending instructor application.", 409);
+    }
+
+    // ✅ Create new application
+    const application = await authRepository.createInstructorApplication(userId, applicationNotes);
+    
+    logger("New instructor application created ***", application.id);
+
+    return application;
+};

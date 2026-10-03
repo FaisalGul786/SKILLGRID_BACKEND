@@ -142,3 +142,23 @@ export const updatePassword = async(req,res) => {
 		message: "password set successfully 🎊"
 	})
 }
+
+
+
+/*
+* Apply for Instructor role
+*/
+export const applyForInstructorController = async (req, res) => {
+    const { applicationNotes } = req.body;
+    
+    const userId = req.user.userId; 
+
+    logger(`User applying for instructor *** `, userId);
+
+    await authService.applyForInstructorService(userId, applicationNotes);
+
+    return res.status(201).json({
+        success: true,
+        message: "Instructor application submitted successfully. Please wait for admin approval. 🕜"
+    });
+};
