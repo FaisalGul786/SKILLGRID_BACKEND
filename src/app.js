@@ -19,6 +19,7 @@ import quizManagementRoutes from "./modules/quiz_management/routes/quiz-manageme
 import assignmentManagementRoutes from "./modules/assignment_management/routes/assignment-management-routes.js"
 import lessonProgressRoutes from "./modules/course_progress/routes/course-progress-routes.js"
 import issueCertificateRoutes from "./modules/certificate/routes/certificate-routes.js"
+import adminRoutes from "./modules/admin/routes/admin-routes.js"
 
 import envConfig from "./shared/config_env/env-variables-config.js"
 
@@ -120,6 +121,11 @@ app.use("/api/student/progress", lessonProgressRoutes)
 // CERTIFICATE____________________________________________________________________________________________________________________________________________
 
 app.use("/api/student/issue", issueCertificateRoutes)
+
+
+// admin____________________________________________________________________________________________________________________________________________
+
+app.use("/api/admin", adminRoutes)
 
 
 /************* Global Error Handler Middleware **********/

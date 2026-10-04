@@ -7,9 +7,12 @@ import {
   getCertificateRecord,
   getCertificateWithDetails,
   createCertificate,
-  updateCertificateUrl
+  updateCertificateUrl,
+  getActiveCertificateTemplate
 } from '../repositories/certificate-repository.js';
 import { generateCertificatePdfBuffer } from './pdf-generator-service.js';
+
+
 
 export const issueCertificateService = async (studentId, courseId) => {
   const existingCert = await getCertificateRecord(studentId, courseId);
@@ -24,40 +27,50 @@ export const issueCertificateService = async (studentId, courseId) => {
 
 export const getCertificateUrlService = async (studentId, courseId) => {
   let certificate = await getCertificateWithDetails(studentId, courseId);
-
   logger(`certificate details >>`, certificate);
   
-  // Auto-issue if student completed but record was missing
   if (!certificate) {
     await issueCertificateService(studentId, courseId);
     certificate = await getCertificateWithDetails(studentId, courseId);
   }
 
-  if (!certificate) {
-    throw new AppError('Certificate not unlocked or course not completed', 404);
-  }
+  if (!certificate) throw new AppError('Certificate not unlocked or course not completed', 404);
 
-  // 1. Return cached URL if it was already generated and uploaded
+  // 1. Return cached URL if already generated
   if (certificate.certificateUrl) {
     logger('Returning existing Cloudinary certificate URL');
     return { url: certificate.certificateUrl };
   }
 
-  // 2. Generate PDF Buffer for the first time
+  // 2. Fetch Admin Template (with fallback)
+  let templateImageBuffer = null;
+  try {
+    const activeTemplate = await getActiveCertificateTemplate();
+    if (activeTemplate && activeTemplate.imageUrl) {
+      const response = await fetch(activeTemplate.imageUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      templateImageBuffer = Buffer.from(arrayBuffer);
+    }
+  } catch (error) {
+    logger('No admin template found or fetch failed. Falling back to scratch generation.', error);
+  }
+
+  // 3. Generate PDF Buffer
   logger('Generating new certificate PDF buffer');
   const pdfBuffer = await generateCertificatePdfBuffer({
     studentName: certificate.studentName,
     courseTitle: certificate.courseTitle,
     certificateCode: certificate.certificateCode,
     issuedAt: certificate.issuedAt,
+    templateImageBuffer // Pass the fetched buffer (or null)
   });
 
-  // 3. Upload Buffer to Cloudinary via Stream
+  // 4. Upload Buffer to Cloudinary via Stream
   const uploadResult = await new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       { 
         folder: 'nexora/certificates', 
-        resource_type: 'raw', // 'raw' is ideal for PDF document downloads
+        resource_type: 'raw', 
         format: 'pdf',
         public_id: `Certificate-${certificate.certificateCode}`
       },
@@ -72,7 +85,7 @@ export const getCertificateUrlService = async (studentId, courseId) => {
     bufferStream.pipe(uploadStream);
   });
 
-  // 4. Save Cloudinary URL to the database
+  // 5. Save Cloudinary URL to the database
   await updateCertificateUrl(certificate.id, uploadResult.secure_url);
 
   return { url: uploadResult.secure_url };
