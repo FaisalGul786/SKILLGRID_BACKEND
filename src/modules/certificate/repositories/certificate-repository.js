@@ -30,11 +30,12 @@
 // };
 
 
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../../../shared/database/config/db-connection.js';
 import { certificates } from '../schema/certificate-schema.js';
 import { users } from '../../authentication/schema/authentication-schema.js';
 import { courses } from '../../course_management/schema/course-management-schema.js';
+import {certificateTemplates} from "../../admin/schema/certificate-template-schema.js"
 import {logger} from "../../../shared/utils/logger.js"
 export const getCertificateWithDetails = async (studentId, courseId) => {
   const [record] = await db
@@ -97,4 +98,14 @@ export const updateCertificateUrl = async (id, certificateUrl) => {
     .returning();
 
   return updated;
+};
+
+export const getActiveCertificateTemplate = async () => {
+  const [template] = await db
+    .select()
+    .from(certificateTemplates)
+    .orderBy(desc(certificateTemplates.createdAt))
+    .limit(1);
+
+  return template;
 };
