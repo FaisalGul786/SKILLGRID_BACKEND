@@ -1,3 +1,4 @@
+
 import { AppError } from "../errors/app-error.js";
 
 export function errorHandler(err, req, res, next) {
@@ -7,7 +8,8 @@ export function errorHandler(err, req, res, next) {
     return res.status(err.statusCode).json({
       success: false,
       message: err.message,
-      code: err.code
+      code: err.code,
+      ...(err.details && err.details.length > 0 && { errors: err.details })
     });
   }
 

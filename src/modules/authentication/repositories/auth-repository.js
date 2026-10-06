@@ -28,7 +28,7 @@ export const storeDataInUpstash = async(data, otp, hashPassword, defaultId) => {
 
     const response = await redis.set(tempUserKey, {
 
-        userName: data.name,
+        userName: data.userName,
         email: data.email,
         password: hashPassword,
         roleId: defaultId,
