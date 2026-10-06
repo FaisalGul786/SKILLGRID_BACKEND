@@ -5,24 +5,27 @@ import * as authController from "../controllers/auth-controller.js"
 
 import authenticate from "../../../shared/middleware/authenticate.js"
 
+import {validate} from "../../../shared/middleware/validate-payload.js"
+
+import {createUserSchema, loginSchema, verifyOtpSchema, resendOtpSchema, forgotPasswordSchema, validateForgotPasswordOtpSchema, updatePasswordSchema, applyInstructorSchema} from "../validations/authentication-validation.js"
 
 const router = Router()
 
-router.post("/register",authController.registerController)
+router.post("/register", validate(createUserSchema), authController.registerController)
 
-router.post("/otp", authController.verifyOTP)
+router.post("/otp", validate(verifyOtpSchema), authController.verifyOTP)
 
-router.get("/otp", authController.generateOTP)
+router.get("/otp",validate(resendOtpSchema), authController.generateOTP)
 
-router.post("/login", authController.login)
+router.post("/login",validate(loginSchema), authController.login)
 
-router.post("/forgot-password", authController.forgotPassword)
+router.post("/forgot-password",validate(forgotPasswordSchema), authController.forgotPassword)
 
-router.post("/verify/forgot-password", authController.validateForgotPasswordOTP)
+router.post("/verify/forgot-password", validate(validateForgotPasswordOtpSchema), authController.validateForgotPasswordOTP)
 
-router.patch("/update-password", authController.updatePassword)
+router.patch("/update-password",validate(updatePasswordSchema), authController.updatePassword)
 
-router.post("/apply-instructor",authenticate,  authController.applyForInstructorController);
+router.post("/apply-instructor" ,authenticate, validate(applyInstructorSchema),  authController.applyForInstructorController);
 
 
 export default router;

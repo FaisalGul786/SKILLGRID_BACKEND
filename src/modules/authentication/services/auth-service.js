@@ -21,6 +21,7 @@ import envConfig from "../../../shared/config_env/env-variables-config.js"
 */
 
 export const registerService = async(registerationData) => {
+	logger(`registerationData >>\n\n`, registerationData)
 	// ✅ check email exist in database
 
 	const isEmailExist = await authRepository.emailCheckRepository(registerationData.email)
@@ -204,7 +205,9 @@ export const generateForgotPasswordOTP = async(email) => {
 
 	logger("******** User in database ", isUserExist);
 
-	if(isUserExist < 1) throw new AppError("If an account associated with that email exists, we have sent a verification code to your inbox.", 200);
+	if(!isUserExist || isUserExist.length < 1) {
+        return null;
+    }
 
 
 	// ✅ store email, OTP , varified === false in Upstash 

@@ -6,7 +6,7 @@ import * as authService from "../services/auth-service.js";
 
 import {logger} from "../../../shared/utils/logger.js"
 
-
+import { AppError } from "../../../shared/errors/app-error.js"
 import envConfig from "../../../shared/config_env/env-variables-config.js"
 
 export const registerController = async(req,res) => {
@@ -88,23 +88,24 @@ export const login = async(req,res) => {
 
 export const forgotPassword = async(req,res) => {
 	const {email} = req.body
-
+	logger(`email >>`, email)
 	const key = await authService.generateForgotPasswordOTP(email)
 	logger(`key **********`,key)
 
-	res.cookie("forgot_key", key, {
-		httpOnly: true,
-		secure: envConfig.NODE_ENV === "production",
-		sameSite: envConfig.NODE_ENV === "production" ? "strict" : "lax",
-		maxAge: 10 * 60 * 1000,
-		path: "/api/auth",
-	})
+	if(key) {
+
+		res.cookie("forgot_key", key, {
+			httpOnly: true,
+			secure: envConfig.NODE_ENV === "production",
+			sameSite: envConfig.NODE_ENV === "production" ? "lax" : "lax",
+			maxAge: 10 * 60 * 1000,
+			path: "/api/auth",
+		})
+	}
 
 	return res.status(200).json({
 		success: true,
-		message: "If an account associated with that email exists, we have sent a verification code to your inbox.",
-		// remove key latter when frontend is ready
-		forgotPasswordKey: key
+		message: "If an account associated with that email exists, we have sent a verification code to your inbox."
 	})
 }
 
@@ -113,9 +114,12 @@ export const forgotPassword = async(req,res) => {
 * validate Forgot Password OTP
 */
 export const validateForgotPasswordOTP = async(req,res) => {
-	const { otp, forgotPasswordKey } = req.body
+	const { otp } = req.body
+	const forgotPasswordKey = req.cookies?.forgot_key;
 
-	logger(`\n\n\n ****** Is there attched key `, req.user);
+	if(!forgotPasswordKey) {
+		throw new AppError("Session expired or invalid reset request. Please request a new OTP.", 400, "SESSION_EXPIRED")
+	}
 
 	logger(`**************\n \n ${otp}`, forgotPasswordKey)
 
@@ -133,8 +137,12 @@ export const validateForgotPasswordOTP = async(req,res) => {
 * update password
 */
 export const updatePassword = async(req,res) => {
-	const { newPassword, forgotPasswordKey } = req.body
-
+	const { newPassword } = req.body
+	const forgotPasswordKey = req.cookies?.forgot_key
+	logger(`\n\n newPassword >> ${newPassword} _____ forgotPasswordKey`, forgotPasswordKey)
+	if(!forgotPasswordKey) {
+		throw new AppError("Session expired or invalid reset request. Please request a new OTP.", 400, "SESSION_EXPIRED")
+	}
 	await authService.updatePasswordService(newPassword, forgotPasswordKey)
 
 	return res.status(200).json({
